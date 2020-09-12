@@ -1,8 +1,10 @@
 package ImageHoster.controller;
 
+import ImageHoster.model.Comment;
 import ImageHoster.model.Image;
 import ImageHoster.model.Tag;
 import ImageHoster.model.User;
+import ImageHoster.service.CommentService;
 import ImageHoster.service.ImageService;
 import ImageHoster.service.TagService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,9 @@ public class ImageController {
     @Autowired
     private TagService tagService;
 
+    @Autowired(required = true)
+    private CommentService commentservice;
+
     //This method displays all the images in the user home page after successful login
     @RequestMapping("images")
     public String getUserImages(Model model) {
@@ -48,6 +53,8 @@ public class ImageController {
     @RequestMapping("/images/{imageId}/{title}")
     public String showImage(@PathVariable("imageId") Integer imageId, @PathVariable("title") String title, Model model) {
         Image image = imageService.getImageByTitle(imageId, title);
+        List<Comment> commentList = commentservice.getComments(image.getId(), image.getTitle());
+        model.addAttribute("comments", commentList);
         model.addAttribute("image", image);
         model.addAttribute("tags", image.getTags());
         return "images/image";
@@ -94,14 +101,17 @@ public class ImageController {
     @RequestMapping(value = "/editImage")
     public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session) {
         Image image = imageService.getImage(imageId);
-
         String tags = convertTagsToString(image.getTags());
+        List<Tag> tag = findOrCreateTags(tags);
+        List<Comment> commentList = commentservice.getComments(image.getId(), image.getTitle());
+        model.addAttribute("comments", commentList);
         model.addAttribute("image", image);
 
         String error = "Only the owner of the image can edit the image";
         Boolean validateUsr = usrValidation(image.getUser(), session);
         if (!validateUsr){
             model.addAttribute("editError", error);
+            model.addAttribute("tags", tag);
             return "images/image";
         }
         else {
@@ -131,7 +141,7 @@ public class ImageController {
     //The method also receives tags parameter which is a string of all the tags separated by a comma using the annotation @RequestParam
     //The method converts the string to a list of all the tags using findOrCreateTags() method and sets the tags attribute of an image as a list of all the tags
     @RequestMapping(value = "/editImage", method = RequestMethod.PUT)
-    public String editImageSubmit(@RequestParam("file") MultipartFile file, @RequestParam("imageId") Integer imageId, @RequestParam("tags") String tags, Image updatedImage, HttpSession session) throws IOException {
+    public String editImageSubmit(@RequestParam("file") MultipartFile file, @RequestParam("imageId") Integer imageId, @RequestParam("tags") String tags, Image updatedImage, HttpSession session, Model model) throws IOException {
 
         Image image = imageService.getImage(imageId);
         String updatedImageData = convertUploadedFileToBase64(file);
@@ -148,8 +158,8 @@ public class ImageController {
         updatedImage.setUser(user);
         updatedImage.setTags(imageTags);
         updatedImage.setDate(new Date());
-
         imageService.updateImage(updatedImage);
+        model.addAttribute("images", updatedImage);
         return "redirect:/images/" + updatedImage.getId() + "/" + updatedImage.getTitle();
 
     }
@@ -161,13 +171,17 @@ public class ImageController {
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
     public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, Model model, HttpSession session) {
         Image image = imageService.getImage(imageId);
-        Boolean validateUsr = usrValidation(image.getUser(), session);
+        String tags = convertTagsToString(image.getTags());
+        List<Tag> tag = findOrCreateTags(tags);
+        List<Comment> commentList = commentservice.getComments(image.getId(), image.getTitle());
 
+        model.addAttribute("image", image);
+        model.addAttribute("tags", image.getTags());
+        model.addAttribute("comments", commentList);
+
+        Boolean validateUsr = usrValidation(image.getUser(), session);
         if (!validateUsr){
             String error = "Only the owner of the image can delete the image";
-
-            model.addAttribute("image", image);
-            model.addAttribute("tags", image.getTags());
             model.addAttribute("deleteError", error);
             return "images/image";
         }
