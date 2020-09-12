@@ -46,7 +46,8 @@ public class UserController {
         Boolean passwordValidation = passwordValidation(password);
         if (passwordValidation) {
             userService.registerUser(user);
-            return "redirect:/users/login";
+            //return "redirect:/users/login";
+            return "users/login";
         }else {
             model.addAttribute("User", user);
             model.addAttribute("passwordTypeError", passwordValidationError);

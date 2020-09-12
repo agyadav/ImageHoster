@@ -51,8 +51,8 @@ public class ImageController {
     //Here a list of tags is added in the Model type object
     //this list is then sent to 'images/image.html' file and the tags are displayed
     @RequestMapping("/images/{imageId}/{title}")
-    public String showImage(@PathVariable("imageId") Integer imageId, @PathVariable("title") String title, Model model) {
-        Image image = imageService.getImageByTitle(imageId, title);
+    public String showImage(@PathVariable("title") String title, Model model, @PathVariable("imageId") Integer imageId) {
+        Image image = imageService.getImage(imageId);
         List<Comment> commentList = commentservice.getComments(image.getId(), image.getTitle());
         model.addAttribute("comments", commentList);
         model.addAttribute("image", image);
@@ -223,6 +223,10 @@ public class ImageController {
     //Converts the list of all tags to a single string containing all the tags separated by a comma
     //Returns the string
     private String convertTagsToString(List<Tag> tags) {
+
+        if (tags == null || tags.isEmpty()) {
+            return "";
+        }
         StringBuilder tagString = new StringBuilder();
 
         for (int i = 0; i <= tags.size() - 2; i++) {
